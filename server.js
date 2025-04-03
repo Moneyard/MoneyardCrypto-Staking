@@ -9,9 +9,9 @@ app.use(express.json());
 
 // Database setup
 const db = new sqlite3.Database('moneyard.db');
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
-// Create users table with all required fields
+// Create users table with balance and referral fields
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -25,7 +25,7 @@ db.serialize(() => {
   `);
 });
 
-// Helper function to generate referral codes
+// Generate referral code
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 8).toUpperCase();
 }
@@ -37,14 +37,13 @@ app.post('/signup', (req, res) => {
   const newReferralCode = generateReferralCode();
 
   db.serialize(() => {
-    // Insert new user
     db.run(
       'INSERT INTO users (email, password, referral_code) VALUES (?, ?, ?)',
       [email, hashedPassword, newReferralCode],
       function (err) {
-        if (err) return res.status(500).json({ error: 'Signup failed: Email may be taken' });
+        if (err) return res.status(500).json({ error: 'Signup failed' });
 
-        // Apply referral bonus if code is valid
+        // Apply referral bonus if valid code
         if (referralCode) {
           db.run(
             'UPDATE users SET balance = balance + 10 WHERE referral_code = ?',
@@ -57,7 +56,7 @@ app.post('/signup', (req, res) => {
 
         res.json({ 
           message: 'User created!',
-          referralCode: newReferralCode // Send user their referral code
+          referralCode: newReferralCode
         });
       }
     );
@@ -68,18 +67,14 @@ app.post('/signup', (req, res) => {
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
-  db.get(
-    'SELECT * FROM users WHERE email = ?',
-    [email],
-    (err, user) => {
-      if (err || !user || !bcrypt.compareSync(password, user.password)) {
-        return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-      res.json({ token });
+  db.get('SELECT * FROM users WHERE email = ?', [email], (err, user) => {
+    if (err || !user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
-  );
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
+    res.json({ token });
+  });
 });
 
 // Protected dashboard endpoint
@@ -95,7 +90,6 @@ app.get('/dashboard', (req, res) => {
       [decoded.userId],
       (err, user) => {
         if (err || !user) return res.status(500).json({ error: 'User not found' });
-        
         res.json({
           email: user.email,
           balance: user.balance,
