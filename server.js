@@ -1,15 +1,27 @@
 const express = require('express');
-  const sqlite3 = require('sqlite3').verbose();
-  const app = express();
+const sqlite3 = require('sqlite3').verbose();
+const app = express();
+app.use(express.json()); // Enable JSON body parsing
 
-  // Use an in-memory SQLite database (no setup needed)
-  const db = new sqlite3.Database(':memory:');
+// Initialize SQLite database
+const db = new sqlite3.Database('moneyard.db');
 
-  app.get('/', (req, res) => {
-    res.send('Moneyard is working!');
+// Create users table
+db.serialize(() => {
+  db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, email TEXT, password TEXT)');
+});
+
+// Signup endpoint
+app.post('/signup', (req, res) => {
+  const { email, password } = req.body;
+  db.run('INSERT INTO users (email, password) VALUES (?, ?)', [email, password], (err) => {
+    if (err) return res.status(500).json({ error: 'Signup failed' });
+    res.json({ message: 'User created!' });
   });
+});
 
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
