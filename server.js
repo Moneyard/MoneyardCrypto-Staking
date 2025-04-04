@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const app = express();
 
-// Middleware to parse JSON request bodies
+// Middleware to parse JSON requests
 app.use(express.json());
 
 // Database setup
@@ -25,47 +25,14 @@ db.serialize(() => {
   `);
 });
 
-// Generate referral code
-function generateReferralCode() {
-  return Math.random().toString(36).substr(2, 8).toUpperCase();
-}
-
 // Home route to prevent 404 error
 app.get("/", (req, res) => {
   res.send("Welcome to Moneyard Staking Platform!");
 });
 
-// Signup endpoint with referral support
-app.post("/signup", (req, res) => {
-  const { email, password, referralCode } = req.body;
-  const hashedPassword = bcrypt.hashSync(password, 10);
-  const newReferralCode = generateReferralCode();
-
-  db.serialize(() => {
-    db.run(
-      "INSERT INTO users (email, password, referral_code) VALUES (?, ?, ?)",
-      [email, hashedPassword, newReferralCode],
-      function (err) {
-        if (err) return res.status(500).json({ error: "Signup failed" });
-
-        // Apply referral bonus if valid code
-        if (referralCode) {
-          db.run(
-            "UPDATE users SET balance = balance + 10 WHERE referral_code = ?",
-            [referralCode],
-            (err) => {
-              if (err) console.error("Referral bonus failed:", err);
-            }
-          );
-        }
-
-        res.json({
-          message: "User created!",
-          referralCode: newReferralCode,
-        });
-      }
-    );
-  });
+// Temporarily simplified /signup route to debug
+app.post('/signup', (req, res) => {
+  res.send('Signup endpoint is working');
 });
 
 // Login endpoint
