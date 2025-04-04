@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const app = express();
 
-// Middleware to parse JSON requests
+// Middleware to parse JSON request bodies
 app.use(express.json());
 
 // Database setup
